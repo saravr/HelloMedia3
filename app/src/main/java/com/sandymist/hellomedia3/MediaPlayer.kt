@@ -1,5 +1,6 @@
 package com.sandymist.hellomedia3
 
+import android.content.ComponentName
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.annotation.OptIn
@@ -45,42 +46,49 @@ import androidx.media3.datasource.RawResourceDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.hls.HlsMediaSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.MediaController
 import androidx.media3.session.MediaSession
+import androidx.media3.session.SessionToken
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
+import com.google.common.util.concurrent.MoreExecutors
 
 @OptIn(UnstableApi::class) @Composable
 fun MediaPlayer() {
     val context = LocalContext.current
-    val uri = "https://audio-edge-2a8hd.sfo.he.radiomast.io/ref-128k-mp3-stereo"
+    val sessionToken = SessionToken(context, ComponentName(context, PlaybackService::class.java))
+    val controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
 
-    val dataSourceFactory = DataSource.Factory {
-        val dataSource = DefaultHttpDataSource.Factory().createDataSource()
-        ////dataSource.setRequestProperty("Authorization", token)
-        dataSource
-    }
 
-    val mediaSourceFactory = HlsMediaSource.Factory(dataSourceFactory)
-        .createMediaSource(MediaItem.fromUri(uri))
-
-    val player = remember {
-        ExoPlayer.Builder(context)
-            //.setAudioAttributes()
-            .setMediaSourceFactory(
-                DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory),
-            )
-            .build()
-            .apply {
-                ////addListener(listener)
-                //addMediaSource(mediaSourceFactory)
-                setMediaItem(MediaItem.fromUri(uri))
-                playWhenReady = true
-                prepare()
-                play()
-            }
-    }
-
-    val mediaSession = MediaSession.Builder(context, player).build()
+//    val uri = "https://audio-edge-2a8hd.sfo.he.radiomast.io/ref-128k-mp3-stereo"
+//
+//    val dataSourceFactory = DataSource.Factory {
+//        val dataSource = DefaultHttpDataSource.Factory().createDataSource()
+//        ////dataSource.setRequestProperty("Authorization", token)
+//        dataSource
+//    }
+//
+//    val mediaSourceFactory = HlsMediaSource.Factory(dataSourceFactory)
+//        .createMediaSource(MediaItem.fromUri(uri))
+//
+//    val player = remember {
+//        ExoPlayer.Builder(context)
+//            //.setAudioAttributes()
+//            .setMediaSourceFactory(
+//                DefaultMediaSourceFactory(context).setDataSourceFactory(dataSourceFactory),
+//            )
+//            .build()
+//            .apply {
+//                ////addListener(listener)
+//                //addMediaSource(mediaSourceFactory)
+//                setMediaItem(MediaItem.fromUri(uri))
+//                playWhenReady = true
+//                prepare()
+//                play()
+//            }
+//    }
+//
+//    val mediaSession = MediaSession.Builder(context, player).build()
 
     Box(modifier = Modifier.fillMaxSize()) {
         AndroidView(
@@ -95,8 +103,11 @@ fun MediaPlayer() {
                     ) // full screen
                 }
             }
-        ) {
-            //it.setBackgroundColor(0x00FF0000)
+        ) { playerView ->
+            controllerFuture.addListener({
+                playerView.setPlayer(controllerFuture.get())
+            }, MoreExecutors.directExecutor())
+
         }
 
         AudioPlayer(
@@ -108,8 +119,12 @@ fun MediaPlayer() {
             playerState = "Playing", //if (isContentPlaying.value) "Playing" else "Paused",
             currentChapter = 1,
             lastChapter = 10, //document.audiobook!!.chapters.size, // TODO: remove !!
-            onPlay = { player.play() },
-            onPause = { player.pause() },
+            onPlay = {
+                controllerFuture.get().play()
+            },
+            onPause = {
+                controllerFuture.get().pause()
+            },
         ) {
         }
     }
