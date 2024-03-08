@@ -1,5 +1,6 @@
 package com.sandymist.hellomedia3
 
+import android.content.Intent
 import android.util.Log
 import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
@@ -20,6 +21,7 @@ class PlaybackService: MediaSessionService() {
     override fun onCreate() {
         super.onCreate()
 
+        Log.e("++++", "++++ SERVICE CREATED")
         val dataSourceFactory = DataSource.Factory {
             val dataSource = DefaultHttpDataSource.Factory().createDataSource()
             ////dataSource.setRequestProperty("Authorization", token)
@@ -44,8 +46,19 @@ class PlaybackService: MediaSessionService() {
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
         mediaSession = MediaSession.Builder(this, player).build()
-        Log.e("++++", "++++ MEDIASESSION: $mediaSession")
+        Log.e("++++", "++++ MEDIA SESSION CREATE: $mediaSession")
         return mediaSession
+    }
+
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        mediaSession?.run {
+            player.release()
+            release()
+            mediaSession = null
+            Log.e("++++", "++++ MEDIA SESSION TASK REMOVED")
+        }
+        super.onTaskRemoved(rootIntent)
+        stopSelf()
     }
 
     override fun onDestroy() {
@@ -53,7 +66,7 @@ class PlaybackService: MediaSessionService() {
             player.release()
             release()
             mediaSession = null
-            Log.e("++++", "++++ MEDIASESSION DESTROYED")
+            Log.e("++++", "++++ MEDIA SESSION DESTROYED")
         }
         super.onDestroy()
     }
